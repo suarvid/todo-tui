@@ -1,5 +1,6 @@
+use serde::{Deserialize, Serialize};
 
-
+#[derive(Serialize, Deserialize, Debug)]
 pub struct TodoItem {
     title: String,
     completed: bool,
@@ -27,8 +28,11 @@ impl TodoItem {
         }
     }
 
-    pub fn set_not_completed(&self) {
-        todo!()
+    pub fn set_not_completed(&mut self) {
+        self.completed = false;
+        for item in &mut self.sub_items {
+            item.completed = false;
+        }
     }
 
     pub fn add_sub_item(&mut self, sub_item: TodoItem) {
@@ -50,6 +54,14 @@ impl TodoItem {
 mod tests {
 
     use super::*;
+
+    #[test]
+    fn test_get_title_returns_title() {
+        let item1 = TodoItem::new_item("Test Item 1");
+        let item2 = TodoItem::new_item("Test Item 2");
+        assert_eq!(item1.get_title(), "Test Item 1");
+        assert_eq!(item2.get_title(), "Test Item 2");
+    }
 
     #[test]
     fn test_created_item_is_not_completed() {
@@ -79,4 +91,19 @@ mod tests {
             assert!(item.is_completed())
         }
     }
+
+    #[test]
+    fn test_sub_items_are_uncompleted_when_uncompleted() {
+        let sub_item_1 = TodoItem::new_item("Sub Item 1");
+        let sub_item_2 = TodoItem::new_item("Sub Item 2");
+        let mut main_item = TodoItem::new_item("Main Item");
+        main_item.add_sub_item(sub_item_1);
+        main_item.add_sub_item(sub_item_2);
+        main_item.set_not_completed();
+        assert!(!main_item.is_completed());
+        for item in main_item.get_sub_items() {
+            assert!(!item.is_completed())
+        }
+    }
+
 }

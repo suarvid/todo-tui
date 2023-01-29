@@ -1,4 +1,4 @@
-mod model;
+mod backend;
 mod frontend;
 
 fn main() {
