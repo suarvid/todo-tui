@@ -2,8 +2,8 @@ use self::todoitem::TodoItem;
 use std::env;
 use std::fs;
 use std::fs::File;
-use std::io::Read;
 use std::io;
+use std::io::Read;
 
 pub mod todoitem;
 
@@ -28,38 +28,38 @@ impl Backend {
         self.todo_items.remove(index);
     }
 
-    pub fn save_items(&self) {
-        let home_path = env::var("HOME");
-        if home_path.is_err() {
-            print!("Failed to get value of $HOME environment variable"); // Maybe try writing to some other hard-coded path?
-        } else {
-            let home_path = home_path.unwrap();
-            let save_path = home_path + DEFAULT_SAVE_PATH;
-            match serde_json::to_string(&self.todo_items) {
-                Ok(serialized_string) => match fs::write(save_path, serialized_string) {
-                    Ok(_) => println!("Successfully saved items."),
-                    Err(err) => {
-                        println!("Failed to save items: {}", err);
-                    }
-                },
-                Err(err) => {
-                    println!("Failed to serialize items: {}", err);
-                }
-            }
+    pub fn get_items(&self) -> &Vec<TodoItem> {
+        &self.todo_items
+    }
+
+    fn get_save_path() -> Result<String, io::Error> {
+        if let Ok(home_path) = env::var("HOME") {
+            return Ok(home_path + DEFAULT_SAVE_PATH);
         }
+
+        Err(io::Error::new(
+            io::ErrorKind::Other,
+            "Failed to read value of $HOME environment variable.",
+        ))
+    }
+
+    pub fn save_items(&self) -> Result<(), std::io::Error> {
+        let save_path = Self::get_save_path()?;
+        let serialized_string = serde_json::to_string(&self.todo_items)?;
+        fs::write(save_path, serialized_string)?;
+        println!("Successfully saved items.");
+
+        Ok(())
     }
 
     pub fn restore_items(&mut self) -> Result<(), std::io::Error> {
-        if let Ok(home_path) = env::var("HOME") {
-            let save_path = home_path + DEFAULT_SAVE_PATH;
-            let mut handle = File::open(save_path)?;
-            let mut buf = String::new();
-            handle.read_to_string(&mut buf)?;
-            self.todo_items = serde_json::from_str(buf.as_str())?;
-            return Ok(());
-        }
+        let save_path = Self::get_save_path()?;
+        let mut handle = File::open(save_path)?;
+        let mut buf = String::new();
+        handle.read_to_string(&mut buf)?;
+        self.todo_items = serde_json::from_str(buf.as_str())?;
 
-        Err(io::Error::new(io::ErrorKind::Other, "Failed to read value of $HOME environment variable."))
+        Ok(())
     }
 }
 
@@ -107,5 +107,10 @@ mod tests {
     #[test]
     fn test_get_home_path() {
         assert!(env::var("HOME").is_ok());
+    }
+
+    #[test]
+    fn test_get_save_path() {
+        assert!(Backend::get_save_path().is_ok());
     }
 }
